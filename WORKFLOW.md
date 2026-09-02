@@ -18,9 +18,9 @@ Tool tự động hoá đúng việc đó cho các Phase mà người dùng là 
 | Finish | "Finished" |
 
 Register không cần Submit tay (tự động khi tạo task ở tool khác). Chỉ hỗ trợ
-đúng 3 Phase trên (`src/config.js` → `PHASE_SUBMIT_CONTENT`) vì nội dung
-comment là quy ước nghiệp vụ cố định — thêm Phase khác phải xác nhận nội dung
-tương ứng trước khi sửa code, không được tự suy ra.
+đúng 3 Phase trên (`src/config.js` → `PHASES`) vì nội dung comment là quy ước
+nghiệp vụ cố định — thêm Phase khác phải xác nhận nội dung tương ứng trước
+khi sửa code, không được tự suy ra.
 
 `--phase`/`--assignee` có thể bỏ qua trên CLI nếu đã set `BLUEPRINT_PHASE`/
 `BLUEPRINT_FULL_NAME` trong `.env` (mỗi thiết bị/người dùng tự cấu hình giá

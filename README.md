@@ -21,7 +21,7 @@ scripts/smoke-test.js         search thử theo Phase/Assignee, chỉ in kết q
 scripts/test-one-ticket.js    test trên đúng 1 ticket -- mặc định dừng trước khi bấm OK, cần CONFIRM=yes mới bấm OK thật
 index.js                  CLI entry point
 setup.bat                 (Windows) cài dependency + tạo .env lần đầu
-run.bat                   (Windows) dry-run -> xác nhận -> chạy thật
+run.bat                   (Windows) chạy Submit THẬT ngay lập tức, không hỏi xác nhận
 ```
 
 ## Cài đặt (Windows — nhanh)
@@ -43,11 +43,13 @@ không bị commit lên git.
 run.bat --phase Confirmation --assignee "<Tên Assignee>"
 ```
 
-Tự động: (1) chạy dry-run, chỉ tìm + in ra ticket đầu tiên sẽ xử lý (không mở
-Submit), (2) hỏi xác nhận (gõ `Y`), (3) chỉ khi xác nhận mới chạy thật, Submit
-lần lượt từng ticket khớp. **Luôn đọc kỹ kết quả dry-run trước khi gõ Y** — đây
-là hành động thật, đẩy trạng thái ticket có sẵn sang Phase kế tiếp trên
-production, không dễ hoàn tác.
+Chạy **Submit THẬT ngay lập tức** (tương đương `node index.js ... --yes`),
+KHÔNG dry-run, KHÔNG hỏi xác nhận — Submit lần lượt từng ticket khớp
+Phase/Assignee cho tới khi hết. **Đây là lựa chọn chủ ý đánh đổi lấy tốc độ**:
+đẩy trạng thái ticket có sẵn sang Phase kế tiếp trên production, không dễ
+hoàn tác. Muốn xem trước danh sách ticket sẽ xử lý mà KHÔNG Submit gì, chạy
+`run.bat --phase ... --assignee ... --dry-run` (hoặc dùng
+`scripts/smoke-test.js`, xem bên dưới).
 
 Có thể bỏ qua `--phase`/`--assignee` nếu đã điền `BLUEPRINT_PHASE`/
 `BLUEPRINT_FULL_NAME` trong `.env` — khi đó chỉ cần chạy `run.bat`.
@@ -80,7 +82,15 @@ node scripts/test-one-ticket.js --phase Solving --assignee "<Tên Assignee>"
 
 Mở ticket đầu tiên khớp, bấm Submit, điền đúng nội dung theo Phase, rồi
 **DỪNG LẠI TRƯỚC KHI BẤM OK** để tự kiểm tra trên trình duyệt. Muốn tự bấm OK
-thật (submit thật, tab tự đóng): thêm `CONFIRM=yes` ở đầu dòng lệnh.
+thật (submit thật, tab tự đóng): set biến môi trường `CONFIRM=yes` trước khi
+chạy — cú pháp khác nhau theo shell:
+- Windows `cmd.exe`: `set CONFIRM=yes && node scripts/test-one-ticket.js ...`
+- PowerShell: `$env:CONFIRM="yes"; node scripts/test-one-ticket.js ...`
+- Bash/macOS/Linux: `CONFIRM=yes node scripts/test-one-ticket.js ...`
+
+⚠️ Không đặt `CONFIRM=yes` cố định trong file `.env` — làm vậy sẽ khiến MỌI
+lần chạy `test-one-ticket.js` sau này tự bấm OK thật ngay lập tức, mất luôn
+cơ chế dừng lại để tự kiểm tra mà script này tồn tại để bảo vệ.
 
 ```
 node index.js --phase Confirmation --assignee "<Tên Assignee>"
@@ -92,7 +102,7 @@ node index.js --phase Confirmation --assignee "<Tên Assignee>"
 - `--max <N>`: tuỳ chọn, giới hạn số ticket tối đa xử lý trong 1 lần chạy.
 - `--dry-run`: chỉ tìm + in ra ticket đầu tiên sẽ xử lý, KHÔNG Submit gì cả.
 - `--yes`: bỏ qua bước xác nhận Enter trước khi bắt đầu (vd chạy tự động theo
-  lịch, hoặc khi đã được `run.bat` tự hỏi xác nhận riêng).
+  lịch — `run.bat` luôn tự thêm cờ này).
 
 Trước khi bắt đầu vòng lặp thật (không có `--dry-run`/`--yes`), tool dừng lại
 chờ nhấn Enter xác nhận (in rõ Phase/Assignee đang dùng) — đọc kỹ dòng này

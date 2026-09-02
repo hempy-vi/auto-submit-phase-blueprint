@@ -11,8 +11,10 @@ function parseArgs(argv) {
   const args = { ...parseCommonArgs(argv), dryRun: false, yes: false };
   for (let i = 0; i < argv.length; i += 1) {
     const a = argv[i];
-    if (a === '--max') { if (hasValueAt(argv, i)) args.max = Number(argv[++i]); }
-    else if (a === '--dry-run') args.dryRun = true;
+    if (a === '--max') {
+      if (!hasValueAt(argv, i)) throw new Error('Thiếu giá trị cho --max (đứng cuối dòng lệnh, hoặc bị 1 cờ khác đứng ngay sau "nuốt" mất).');
+      args.max = Number(argv[++i]);
+    } else if (a === '--dry-run') args.dryRun = true;
     else if (a === '--yes') args.yes = true;
   }
   return args;
@@ -74,34 +76,38 @@ async function main() {
     slowMo: 50,
     args: ['--start-maximized', '--disable-gpu', '--disable-dev-shm-usage', '--disable-features=CalculateNativeWinOcclusion'],
   });
-  const context = await browser.newContext({ viewport: null });
-  const page = await context.newPage();
-
+  // Bọc TOÀN BỘ vòng đời trình duyệt (login, điều hướng, xác nhận, batch)
+  // trong 1 try/finally duy nhất — lỗi ở BẤT KỲ bước nào (kể cả
+  // gotoRequirementList, vốn từng nằm ngoài phạm vi try/finally trước đây)
+  // vẫn phải đóng được trình duyệt, tránh treo tiến trình Node vô thời hạn.
   try {
-    console.log('Đang đăng nhập tự động...');
-    await blueprint.login(page, getCredentials());
-    console.log('Đăng nhập xong.');
-  } catch (err) {
-    console.warn(`Đăng nhập tự động lỗi (${err.message}) — chuyển sang đăng nhập thủ công.`);
-    await page.goto(CONSTANTS.loginUrl);
-    await waitForEnter('\nVui lòng đăng nhập thủ công trên trình duyệt, sau đó nhấn Enter ở đây để tiếp tục...\n');
-  }
-  // Luôn điều hướng tới trang Requirement 1 lần duy nhất SAU khi đã đăng nhập
-  // xong (tự động hoặc thủ công) — tách riêng khỏi try/catch ở trên để lỗi ở
-  // chính bước điều hướng này (vd network chập chờn) không bị hiểu nhầm thành
-  // "đăng nhập tự động lỗi" và đẩy người dùng vào màn hình đăng nhập thủ công
-  // dù thật ra họ đã đăng nhập thành công.
-  await blueprint.gotoRequirementList(page);
+    const context = await browser.newContext({ viewport: null });
+    const page = await context.newPage();
 
-  if (!args.dryRun && !args.yes) {
-    await waitForEnter(
-      `\nSẽ tìm và Submit TẤT CẢ ticket khớp Phase="${args.phase}" + Assignee=[${args.assignees.join(', ')}]. ` +
-        'Đây là thao tác THẬT trên hệ thống production, không hoàn tác được từng ticket một cách dễ dàng.\n' +
-        'Nhấn Enter để tiếp tục, hoặc Ctrl+C để huỷ...\n'
-    );
-  }
+    try {
+      console.log('Đang đăng nhập tự động...');
+      await blueprint.login(page, getCredentials());
+      console.log('Đăng nhập xong.');
+    } catch (err) {
+      console.warn(`Đăng nhập tự động lỗi (${err.message}) — chuyển sang đăng nhập thủ công.`);
+      await page.goto(CONSTANTS.loginUrl);
+      await waitForEnter('\nVui lòng đăng nhập thủ công trên trình duyệt, sau đó nhấn Enter ở đây để tiếp tục...\n');
+    }
+    // Luôn điều hướng tới trang Requirement 1 lần duy nhất SAU khi đã đăng
+    // nhập xong (tự động hoặc thủ công) — tách riêng khỏi try/catch ở trên để
+    // lỗi ở chính bước điều hướng này (vd network chập chờn) không bị hiểu
+    // nhầm thành "đăng nhập tự động lỗi" và đẩy người dùng vào màn hình đăng
+    // nhập thủ công dù thật ra họ đã đăng nhập thành công.
+    await blueprint.gotoRequirementList(page);
 
-  try {
+    if (!args.dryRun && !args.yes) {
+      await waitForEnter(
+        `\nSẽ tìm và Submit TẤT CẢ ticket khớp Phase="${args.phase}" + Assignee=[${args.assignees.join(', ')}]. ` +
+          'Đây là thao tác THẬT trên hệ thống production, không hoàn tác được từng ticket một cách dễ dàng.\n' +
+          'Nhấn Enter để tiếp tục, hoặc Ctrl+C để huỷ...\n'
+      );
+    }
+
     const results = await runBatch(page, {
       phase: args.phase,
       assignees: args.assignees,
@@ -110,13 +116,23 @@ async function main() {
     });
     printSummary(results);
     if (results.ambiguous && results.ambiguous.length > 0) {
-      // KHÔNG đóng trình duyệt ngay — tab của ticket "cần kiểm tra tay" (đã
-      // bấm OK nhưng chưa xác nhận tự đóng được) vẫn đang mở, để người dùng
-      // tự xem trước khi tool đóng hết trình duyệt.
-      await waitForEnter(
-        `\n⚠️  Có ${results.ambiguous.length} ticket ở trạng thái "Cần kiểm tra tay" — tab ticket đó vẫn ` +
-          'đang mở. Tự kiểm tra trên trình duyệt xong rồi nhấn Enter ở đây để đóng...\n'
-      );
+      if (args.yes) {
+        // Chạy với --yes (vd qua run.bat, không có ai ngồi chờ theo dõi) —
+        // KHÔNG chờ Enter (có thể treo vô thời hạn nếu không ai theo dõi),
+        // chỉ log rõ ràng rồi để trình duyệt đóng bình thường ở finally.
+        console.log(
+          `\n⚠️  Có ${results.ambiguous.length} ticket ở trạng thái "Cần kiểm tra tay" (xem chi tiết ở tổng kết ` +
+            'phía trên) — đang chạy với --yes nên KHÔNG dừng chờ xác nhận, trình duyệt sẽ đóng ngay.'
+        );
+      } else {
+        // KHÔNG đóng trình duyệt ngay — tab của ticket "cần kiểm tra tay" (đã
+        // bấm OK nhưng chưa xác nhận tự đóng được) vẫn đang mở, để người
+        // dùng tự xem trước khi tool đóng hết trình duyệt.
+        await waitForEnter(
+          `\n⚠️  Có ${results.ambiguous.length} ticket ở trạng thái "Cần kiểm tra tay" — tab ticket đó vẫn ` +
+            'đang mở. Tự kiểm tra trên trình duyệt xong rồi nhấn Enter ở đây để đóng...\n'
+        );
+      }
     }
   } finally {
     await browser.close();

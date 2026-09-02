@@ -8,7 +8,7 @@
 require('../src/loadEnv').loadEnv();
 const { chromium } = require('playwright');
 const blueprint = require('../src/blueprintActions');
-const { getCredentials, getDefaultAssignees, getDefaultPhase, PHASE_DISPLAY_NAME } = require('../src/config');
+const { getCredentials, getDefaultAssignees, getDefaultPhase, getSubmitContentForPhase, PHASE_DISPLAY_NAME } = require('../src/config');
 const { parseCommonArgs } = require('../src/cliArgs');
 
 async function main() {
@@ -23,10 +23,17 @@ async function main() {
     process.exitCode = 1;
     return;
   }
-  const phase = args.phase;
   const assignees = args.assignees;
 
-  if (!Object.values(PHASE_DISPLAY_NAME).some((p) => p.toLowerCase() === phase.toLowerCase())) {
+  // Dùng ĐÚNG displayName chuẩn hoá (giống index.js/runner.js/test-one-ticket.js)
+  // khi Phase là 1 trong 3 giá trị hỗ trợ Submit — tránh gõ dư khoảng trắng
+  // hoặc sai hoa/thường khiến smoke-test "fail" dù batch thật vẫn chạy đúng
+  // (hoặc ngược lại). Phase KHÔNG hỗ trợ Submit (vd "Register") vẫn cho phép
+  // search thử — chỉ cảnh báo, dùng nguyên input đã trim.
+  let phase = String(args.phase).trim();
+  try {
+    phase = getSubmitContentForPhase(args.phase).displayName;
+  } catch {
     console.warn(`Phase "${phase}" không nằm trong danh sách hỗ trợ nội dung Submit (${Object.values(PHASE_DISPLAY_NAME).join(', ')}), nhưng vẫn thử search bình thường.`);
   }
 

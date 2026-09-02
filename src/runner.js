@@ -4,6 +4,12 @@ const blueprint = require('./blueprintActions');
 const { getSubmitContentForPhase } = require('./config');
 
 const UNREADABLE_SUMMARY = '(không đọc được tóm tắt dòng)';
+// Backstop chung: dừng hẳn sau ngần này lần lỗi LIÊN TIẾP dù KHÔNG phải cùng
+// 1 ticket — chặn trường hợp 2+ ticket khác nhau lỗi luân phiên (A lỗi → B
+// lỗi → A lại lỗi → ...) mà guard "cùng 1 ticket lặp lại" (dựa vào so khớp
+// summary) không bao giờ tự phát hiện được vì mỗi lần so sánh chỉ nhớ đúng 1
+// lần lỗi gần nhất.
+const MAX_CONSECUTIVE_FAILURES = 3;
 
 /**
  * @param {import('playwright').Page} page trang danh sách Requirement (tab chính, giữ nguyên suốt batch)
@@ -29,6 +35,7 @@ async function runBatch(page, options) {
   // tạo `null` (khác hẳn mọi summary/placeholder thật) để không bị hiểu nhầm
   // là "trùng" ngay ở lần thử đầu tiên.
   let lastFailedSummary = null;
+  let consecutiveFailures = 0;
 
   try {
     for (;;) {
@@ -83,6 +90,7 @@ async function runBatch(page, options) {
         await blueprint.submitPhase(detailPage, content);
         results.success.push({ summary, url });
         lastFailedSummary = null;
+        consecutiveFailures = 0;
         console.log(`OK (${content}): ${summary} -> ${url}`);
       } catch (err) {
         if (err.okClickedButNotConfirmedClosed) {
@@ -99,12 +107,20 @@ async function runBatch(page, options) {
 
         results.failed.push({ summary, error: err.message });
         lastFailedSummary = summary;
+        consecutiveFailures += 1;
         console.error(`LỖI: ${summary} -> ${err.message}`);
         if (detailPage && !detailPage.isClosed()) {
           await detailPage.close().catch(() => {});
         }
         if (page.isClosed()) {
           console.error('Trình duyệt/tab chính đã bị đóng — dừng batch tại đây.');
+          break;
+        }
+        if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
+          console.error(
+            `Đã lỗi ${consecutiveFailures} lần liên tiếp (không nhất thiết cùng 1 ticket) — ` +
+              'dừng batch tại đây để tránh lặp vô hạn giữa nhiều ticket lỗi luân phiên, cần kiểm tra tay.'
+          );
           break;
         }
       }

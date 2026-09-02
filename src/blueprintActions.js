@@ -64,6 +64,10 @@ async function selectProject(page) {
 /** Bật Advance Search nếu đang tắt (kiểm tra aria-checked trước khi click, tránh bấm nhầm chiều tắt nó đi). */
 async function enableAdvanceSearch(page) {
   const handle = page.locator(SEL.requirementList.advSearchToggle.handle);
+  // Đợi phần tử thật sự hiện ra trước khi đọc aria-checked — nếu đọc quá sớm
+  // (thuộc tính chưa kịp gán), getAttribute() trả về null, dễ hiểu nhầm
+  // null !== 'true' thành "đang tắt" rồi bấm nhầm tắt luôn cái đang bật.
+  await handle.waitFor({ state: 'visible', timeout: 10000 });
   const isOn = (await handle.getAttribute('aria-checked')) === 'true';
   if (!isOn) {
     await handle.click();
@@ -148,6 +152,14 @@ async function confirmSubmit(detailPage) {
   await okButton.waitFor({ state: 'visible', timeout: 10000 });
 
   const closedPromise = detailPage.waitForEvent('close', { timeout: 20000 });
+  // Nếu `okButton.click()` ném lỗi vì lý do KHÁC (không phải tab không tự
+  // đóng), `closedPromise` không còn được `await` bên dưới nữa nhưng vẫn còn
+  // "sống" — nếu nó reject sau đó (hết 20s) mà không ai lắng nghe, Node sẽ
+  // coi là unhandled rejection và có thể crash cả tiến trình đúng lúc code
+  // gọi đang chờ người dùng xác nhận ở nhánh "cần kiểm tra tay". Gắn thêm 1
+  // `.catch()` rỗng ngay từ đầu để tự nó luôn được coi là "đã xử lý", không
+  // ảnh hưởng gì tới việc `await closedPromise` bên dưới vẫn nhận đúng kết quả.
+  closedPromise.catch(() => {});
   try {
     await okButton.click();
     await closedPromise;
