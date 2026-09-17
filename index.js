@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 // CLI entry point. Xem README.md để biết cách dùng.
+const path = require('path');
 const readline = require('readline');
 require('./src/loadEnv').loadEnv();
 const { runBatch, printSummary } = require('./src/runner');
@@ -83,6 +84,16 @@ async function main() {
   try {
     const context = await browser.newContext({ viewport: null });
     const page = await context.newPage();
+
+    // Màn hình chào (assets/splash.html) — thuần cosmetic, không ảnh hưởng
+    // logic batch. Lỗi ở bước này (vd thiếu file) không được làm dừng cả batch.
+    try {
+      const splashPath = path.resolve(__dirname, 'assets', 'splash.html');
+      await page.goto(`file:///${splashPath.replace(/\\/g, '/')}`);
+      await page.waitForTimeout(10000);
+    } catch (err) {
+      console.warn(`Không hiện được màn hình chào (${err.message}) — bỏ qua, tiếp tục đăng nhập.`);
+    }
 
     try {
       console.log('Đang đăng nhập tự động...');
