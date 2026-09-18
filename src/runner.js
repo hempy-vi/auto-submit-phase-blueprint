@@ -30,10 +30,9 @@ async function runBatch(page, options) {
   const results = { success: [], failed: [], ambiguous: [] };
   const maxTickets = Number.isFinite(options.maxTickets) ? options.maxTickets : Infinity;
   let round = 0;
-  // Chữ ký (toàn bộ chuỗi summary, KHÔNG chỉ mã ticket) của lần ticket lỗi
-  // gần nhất — dùng để phát hiện "vẫn là ticket/dòng đó" ở vòng kế tiếp. Khởi
-  // tạo `null` (khác hẳn mọi summary/placeholder thật) để không bị hiểu nhầm
-  // là "trùng" ngay ở lần thử đầu tiên.
+  // Chữ ký của lần ticket lỗi gần nhất, dùng để phát hiện "vẫn là ticket/dòng
+  // đó" ở vòng kế tiếp (cơ chế so khớp: xem comment bên dưới). Khởi tạo `null`
+  // để không bị hiểu nhầm là "trùng" ngay ở lần thử đầu tiên.
   let lastFailedSummary = null;
   let consecutiveFailures = 0;
 

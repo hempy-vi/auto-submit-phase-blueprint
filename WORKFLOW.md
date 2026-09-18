@@ -110,9 +110,11 @@ ticket bị kẹt, dừng hẳn để tránh lặp vô hạn), hoặc trình duy
 - **Trạng thái "Cần kiểm tra tay"** (`results.ambiguous`): khi OK đã click
   thật (hoặc chính lệnh click ném lỗi giữa chừng — coi như không chắc chắn)
   nhưng tab không xác nhận tự đóng được trong thời gian chờ, tool dừng batch,
-  KHÔNG tự đóng tab đó, và KHÔNG tự đóng cả trình duyệt cho tới khi người dùng
-  tự kiểm tra xong và nhấn Enter xác nhận (`index.js`) — không có cách nào tự
-  động phân biệt "server chỉ chậm" với "lỗi thật" từ phía tool.
+  KHÔNG tự đóng tab đó. Không còn bước chờ Enter riêng cho case này — sau MỌI
+  lần chạy thật (có hay không có ambiguous), `index.js` luôn tạo báo cáo rồi
+  treo trình duyệt (gồm cả tab ticket "cần kiểm tra tay" nếu có) tới khi
+  người dùng tự đóng — không có cách nào tự động phân biệt "server chỉ chậm"
+  với "lỗi thật" từ phía tool.
 - **Phát hiện ticket bị kẹt** chỉ dừng batch lại (không có cách bỏ qua ticket
   đó để xử lý tiếp ticket khác), vì tool không có cách yêu cầu Blueprint loại
   trừ 1 ticket cụ thể khỏi kết quả Advance Search.

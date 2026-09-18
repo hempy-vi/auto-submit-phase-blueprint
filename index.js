@@ -6,6 +6,7 @@ require('./src/loadEnv').loadEnv();
 const { runBatch, printSummary } = require('./src/runner');
 const { CONSTANTS, getCredentials, getDefaultAssignees, getDefaultPhase, getSubmitContentForPhase, PHASE_DISPLAY_NAME } = require('./src/config');
 const { parseCommonArgs, hasValueAt } = require('./src/cliArgs');
+const { buildReportHtml, writeReportFile } = require('./src/report');
 const blueprint = require('./src/blueprintActions');
 
 function parseArgs(argv) {
@@ -61,8 +62,8 @@ async function main() {
     return;
   }
   // Validate Phase NGAY TỪ ĐẦU (trước khi mở trình duyệt/đăng nhập/xin xác
-  // nhận) — tránh việc người dùng phải login + đọc và xác nhận Enter dòng
-  // cảnh báo "thao tác THẬT trên production" xong mới phát hiện gõ sai Phase.
+  // nhận) — tránh người dùng phải login + xác nhận cảnh báo "thao tác THẬT
+  // trên production" xong mới phát hiện gõ sai Phase.
   try {
     getSubmitContentForPhase(args.phase);
   } catch (err) {
@@ -78,9 +79,9 @@ async function main() {
     args: ['--start-maximized', '--disable-gpu', '--disable-dev-shm-usage', '--disable-features=CalculateNativeWinOcclusion'],
   });
   // Bọc TOÀN BỘ vòng đời trình duyệt (login, điều hướng, xác nhận, batch)
-  // trong 1 try/finally duy nhất — lỗi ở BẤT KỲ bước nào (kể cả
-  // gotoRequirementList, vốn từng nằm ngoài phạm vi try/finally trước đây)
-  // vẫn phải đóng được trình duyệt, tránh treo tiến trình Node vô thời hạn.
+  // trong 1 try/finally duy nhất — lỗi ở bất kỳ bước nào (kể cả
+  // gotoRequirementList, trước đây nằm ngoài try/finally) vẫn phải đóng được
+  // trình duyệt, tránh treo tiến trình Node vô thời hạn.
   try {
     const context = await browser.newContext({ viewport: null });
     const page = await context.newPage();
@@ -104,11 +105,10 @@ async function main() {
       await page.goto(CONSTANTS.loginUrl);
       await waitForEnter('\nVui lòng đăng nhập thủ công trên trình duyệt, sau đó nhấn Enter ở đây để tiếp tục...\n');
     }
-    // Luôn điều hướng tới trang Requirement 1 lần duy nhất SAU khi đã đăng
-    // nhập xong (tự động hoặc thủ công) — tách riêng khỏi try/catch ở trên để
-    // lỗi ở chính bước điều hướng này (vd network chập chờn) không bị hiểu
-    // nhầm thành "đăng nhập tự động lỗi" và đẩy người dùng vào màn hình đăng
-    // nhập thủ công dù thật ra họ đã đăng nhập thành công.
+    // Luôn điều hướng tới trang Requirement 1 lần duy nhất SAU khi đăng nhập
+    // xong (tự động hoặc thủ công) — tách khỏi try/catch phía trên để lỗi
+    // điều hướng (vd network chập chờn) không bị hiểu nhầm là "đăng nhập tự
+    // động lỗi", đẩy nhầm sang đăng nhập thủ công dù đã đăng nhập thành công.
     await blueprint.gotoRequirementList(page);
 
     if (!args.dryRun && !args.yes) {
@@ -126,24 +126,26 @@ async function main() {
       maxTickets: args.max,
     });
     printSummary(results);
-    if (results.ambiguous && results.ambiguous.length > 0) {
-      if (args.yes) {
-        // Chạy với --yes (vd qua run.bat, không có ai ngồi chờ theo dõi) —
-        // KHÔNG chờ Enter (có thể treo vô thời hạn nếu không ai theo dõi),
-        // chỉ log rõ ràng rồi để trình duyệt đóng bình thường ở finally.
-        console.log(
-          `\n⚠️  Có ${results.ambiguous.length} ticket ở trạng thái "Cần kiểm tra tay" (xem chi tiết ở tổng kết ` +
-            'phía trên) — đang chạy với --yes nên KHÔNG dừng chờ xác nhận, trình duyệt sẽ đóng ngay.'
+
+    if (!args.dryRun) {
+      // Sau 1 lần chạy THẬT: tạo báo cáo HTML (cùng phong cách assets/splash.html
+      // — thống kê + danh sách Thành công/Lỗi/Cần kiểm tra tay, kèm link mở
+      // từng ticket), mở trên tab hiện tại, rồi GIỮ trình duyệt mở VÔ THỜI HẠN
+      // cho người dùng tự xem — không gọi browser.close(). Node phải sống để
+      // không kéo theo đóng Chromium; tự đóng cửa sổ trình duyệt là cách duy
+      // nhất để kết thúc — bắt sự kiện 'disconnected' để tiến trình nền (chạy
+      // qua run.bat) tự thoát sạch, không để lại tiến trình mồ côi.
+      try {
+        const reportPath = writeReportFile(
+          buildReportHtml({ phase: args.phase, assignees: args.assignees, results, finishedAt: new Date() })
         );
-      } else {
-        // KHÔNG đóng trình duyệt ngay — tab của ticket "cần kiểm tra tay" (đã
-        // bấm OK nhưng chưa xác nhận tự đóng được) vẫn đang mở, để người
-        // dùng tự xem trước khi tool đóng hết trình duyệt.
-        await waitForEnter(
-          `\n⚠️  Có ${results.ambiguous.length} ticket ở trạng thái "Cần kiểm tra tay" — tab ticket đó vẫn ` +
-            'đang mở. Tự kiểm tra trên trình duyệt xong rồi nhấn Enter ở đây để đóng...\n'
-        );
+        await page.goto(`file:///${reportPath.replace(/\\/g, '/')}`);
+        console.log(`\nĐã mở báo cáo kết quả: ${reportPath}`);
+      } catch (err) {
+        console.warn(`Không tạo/mở được báo cáo (${err.message}) — kết quả vẫn đúng ở phần tổng kết console phía trên.`);
       }
+      browser.on('disconnected', () => process.exit(0));
+      await new Promise(() => {});
     }
   } finally {
     await browser.close();

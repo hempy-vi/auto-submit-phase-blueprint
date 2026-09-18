@@ -17,11 +17,13 @@ src/selectors.js          CSS selector của Blueprint
 src/blueprintActions.js   hành động Playwright (login, chọn Project, Advance Search, Submit 1 ticket)
 src/runner.js             vòng lặp batch: search -> xử lý ticket đầu tiên -> search lại -> lặp tới khi hết
 src/loadEnv.js            nạp file .env
+src/report.js             sinh trang HTML báo cáo kết quả (cùng phong cách assets/splash.html)
 scripts/smoke-test.js         search thử theo Phase/Assignee, chỉ in kết quả, KHÔNG Submit
 scripts/test-one-ticket.js    test trên đúng 1 ticket -- mặc định dừng trước khi bấm OK, cần CONFIRM=yes mới bấm OK thật
 index.js                  CLI entry point
 setup.bat                 (Windows) cài dependency + tạo .env lần đầu
-run.bat                   (Windows) chạy Submit THẬT ngay lập tức, không hỏi xác nhận
+run.bat                   (Windows) chạy Submit THẬT ngay lập tức, không hỏi xác nhận (tự ẩn qua run-hidden.vbs)
+run-hidden.vbs            (Windows) chạy AN hoàn toàn (không cửa sổ) -- gọi bởi chính run.bat
 ```
 
 ## Cài đặt (Windows — nhanh)
@@ -48,8 +50,16 @@ KHÔNG dry-run, KHÔNG hỏi xác nhận — Submit lần lượt từng ticket 
 Phase/Assignee cho tới khi hết. **Đây là lựa chọn chủ ý đánh đổi lấy tốc độ**:
 đẩy trạng thái ticket có sẵn sang Phase kế tiếp trên production, không dễ
 hoàn tác. Muốn xem trước danh sách ticket sẽ xử lý mà KHÔNG Submit gì, chạy
-`run.bat --phase ... --assignee ... --dry-run` (hoặc dùng
+`node index.js --phase ... --assignee ... --dry-run` (hoặc dùng
 `scripts/smoke-test.js`, xem bên dưới).
+
+`run.bat` tự relaunch chính nó qua `run-hidden.vbs` ngay khi được gọi — cửa sổ
+cmd biến mất ngay lập tức (không cửa sổ, không icon taskbar), stdout/stderr
+được ghi vào `logs/run-last.log` để đối chiếu sau. Trình duyệt Playwright vẫn
+hiện bình thường (không ẩn được), báo cáo tự mở trên trình duyệt đó khi chạy
+xong; tiến trình Node tự thoát sạch khi bạn đóng trình duyệt. Muốn thấy cửa sổ
+cmd (vd để debug), gọi thẳng `node index.js --phase ... --assignee ...` thay
+vì `run.bat`.
 
 Có thể bỏ qua `--phase`/`--assignee` nếu đã điền `BLUEPRINT_PHASE`/
 `BLUEPRINT_FULL_NAME` trong `.env` — khi đó chỉ cần chạy `run.bat`.

@@ -236,8 +236,15 @@
       </div>
       <div class="bar"><div class="fill"></div></div>
 
-      <footer>Copyright &copy; 2026 by <b>Hempy</b></footer>
+      <footer>Copyright &copy; <span id="year">2026</span> by <b>Hempy</b></footer>
     </div>
   </div>
+
+  <script>
+    // Tự cập nhật theo năm hệ thống thật — "2026" ở trên chỉ là fallback tĩnh
+    // phòng khi JS vì lý do gì đó không chạy (thực tế luôn chạy trong Chromium
+    // do Playwright điều khiển).
+    document.getElementById('year').textContent = new Date().getFullYear();
+  </script>
 </body>
 </html>

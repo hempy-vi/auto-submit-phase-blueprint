@@ -15,11 +15,11 @@ function hasValueAt(argv, i) {
 }
 
 /**
- * ⚠️ Cố ý NÉM LỖI (không âm thầm bỏ qua) khi `--phase`/`--assignee` xuất hiện
- * nhưng thiếu giá trị hợp lệ theo sau — vd gõ nhầm `--phase --assignee "X"`
- * (quên giá trị Phase). Vì `run.bat` giờ chạy Submit thật ngay không hỏi xác
- * nhận, im lặng rơi về giá trị mặc định trong `.env` (khác hẳn ý người dùng
- * gõ) là hành vi nguy hiểm hơn nhiều so với dừng lại báo lỗi rõ ràng.
+ * ⚠️ Cố ý NÉM LỖI (không âm thầm bỏ qua) khi `--phase`/`--assignee` thiếu giá
+ * trị hợp lệ theo sau — vd gõ nhầm `--phase --assignee "X"` (quên giá trị
+ * Phase). Vì `run.bat` chạy Submit thật ngay không hỏi xác nhận, im lặng rơi
+ * về giá trị mặc định trong `.env` (khác ý người dùng) nguy hiểm hơn nhiều so
+ * với dừng lại báo lỗi rõ ràng.
  */
 function parseCommonArgs(argv) {
   const args = { assignees: [] };

@@ -25,11 +25,10 @@ async function main() {
   }
   const assignees = args.assignees;
 
-  // Dùng ĐÚNG displayName chuẩn hoá (giống index.js/runner.js/test-one-ticket.js)
-  // khi Phase là 1 trong 3 giá trị hỗ trợ Submit — tránh gõ dư khoảng trắng
-  // hoặc sai hoa/thường khiến smoke-test "fail" dù batch thật vẫn chạy đúng
-  // (hoặc ngược lại). Phase KHÔNG hỗ trợ Submit (vd "Register") vẫn cho phép
-  // search thử — chỉ cảnh báo, dùng nguyên input đã trim.
+  // Dùng đúng displayName chuẩn hoá (giống index.js/runner.js/test-one-ticket.js)
+  // khi Phase thuộc 3 giá trị hỗ trợ Submit, tránh sai khoảng trắng/hoa-thường
+  // khiến smoke-test "fail" dù batch thật chạy đúng. Phase không hỗ trợ Submit
+  // (vd "Register") vẫn cho search thử, chỉ cảnh báo, dùng nguyên input đã trim.
   let phase = String(args.phase).trim();
   try {
     phase = getSubmitContentForPhase(args.phase).displayName;

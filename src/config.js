@@ -6,20 +6,20 @@ const CONSTANTS = {
   loginUrl: 'https://blueprint.cyberlogitec.com.vn',
   requirementListUrl: 'https://blueprint.cyberlogitec.com.vn/UI_PIM_001',
 
-  // ⚠️ Giống hệt lý do ở auto-log-task-blueprint: project MẶC ĐỊNH của tài
-  // khoản là "CAPA Management" (đã xác nhận thật khi khám phá tool này), có
-  // luồng Phase HOÀN TOÀN khác (Register/Focal Receiving/Confirmation/
-  // Solving/Analysis/Design/Implementation/.../1st Confirm/2nd Confirm...).
-  // Công việc thật của người dùng (luồng Register/Confirmation/Solving/Finish)
-  // nằm ở project "ERP Maintenance" — ĐÃ XÁC NHẬN THẬT (đọc được đúng ticket
-  // #2881, #2822... khớp với auto-log-task-blueprint) khi chọn đúng project
-  // này trước khi bật Advance Search. BẮT BUỘC chọn đúng, không để mặc định.
+  // ⚠️ Giống hệt auto-log-task-blueprint: project MẶC ĐỊNH của tài khoản là
+  // "CAPA Management" (đã xác nhận thật), có luồng Phase HOÀN TOÀN khác
+  // (Register/Focal Receiving/Confirmation/Solving/Analysis/Design/
+  // Implementation/.../1st Confirm/2nd Confirm...). Công việc thật của người
+  // dùng (luồng Register/Confirmation/Solving/Finish) nằm ở project "ERP
+  // Maintenance" — ĐÃ XÁC NHẬN THẬT (đọc được đúng ticket #2881, #2822...
+  // khớp với auto-log-task-blueprint) khi chọn project này trước khi bật
+  // Advance Search. BẮT BUỘC chọn đúng, không để mặc định.
   //
-  // ⚠️ Theo yêu cầu của người dùng: CHỈ chọn Project, KHÔNG chọn
-  // tiếp module con trong cây bên trái (vd "Logistics") như auto-log-task-blueprint
-  // từng làm — vì ticket của mỗi người dùng có thể rải rác ở NHIỀU module
-  // khác nhau trong cùng project (Data Model/Logistics/Human Resource/
-  // Accounting), chọn riêng 1 module sẽ lọc mất ticket ở các module khác.
+  // ⚠️ Theo yêu cầu của người dùng: CHỈ chọn Project, KHÔNG chọn tiếp module
+  // con trong cây bên trái như auto-log-task-blueprint từng làm — vì ticket
+  // của mỗi người dùng có thể rải rác ở NHIỀU module khác nhau trong cùng
+  // project (Data Model/Logistics/Human Resource/Accounting), chọn riêng 1
+  // module sẽ lọc mất ticket ở các module khác.
   projectName: 'ERP Maintenance',
 };
 
@@ -55,7 +55,7 @@ function getSubmitContentForPhase(phase) {
  * Giá trị mặc định cho `--assignee` khi không truyền qua CLI — đọc từ
  * `BLUEPRINT_FULL_NAME` trong `.env` (tên hiển thị của người dùng đang chạy
  * tool, đúng như trên Blueprint). Mỗi người dùng tự set tên mình trong `.env`
- * cục bộ của họ, không hardcode trong code — xem `.env.example`. Hỗ trợ nhiều
+ * cục bộ, không hardcode trong code — xem `.env.example`. Hỗ trợ nhiều
  * tên phân cách bằng dấu phẩy, cùng cú pháp với `--assignee`. Trả về mảng
  * rỗng nếu chưa set.
  */
