@@ -48,6 +48,13 @@ function getSubmitContentForPhase(phase) {
         'phải xác nhận nội dung comment tương ứng với người dùng trước khi thêm vào config.js).'
     );
   }
+  // Cho phép ghi đè nội dung Submit qua BLUEPRINT_SUBMIT_MESSAGE trong `.env`
+  // (áp dụng chung cho mọi Phase) — có thì dùng, không có thì giữ nguyên
+  // nội dung mặc định theo Phase như cũ.
+  const customMessage = String(process.env.BLUEPRINT_SUBMIT_MESSAGE || '').trim();
+  if (customMessage) {
+    return { ...entry, content: customMessage };
+  }
   return entry;
 }
 
